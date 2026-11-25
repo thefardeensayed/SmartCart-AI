@@ -6,7 +6,7 @@ import streamlit as st
 
 from src.catalog import CATALOG, get_all_categories
 from src.data_generator import generate_ecommerce_data
-from src.analytics import run_apriori_analysis, get_eda_summaries
+from src.analytics import run_bayesian_inference_engine, get_eda_summaries
 from src.ml_engine import train_and_evaluate_models, FEATURE_COLS
 
 st.set_page_config(page_title="SmartCart AI — Bengaluru Electronics Storefront", layout="wide")
@@ -19,9 +19,9 @@ def load_datasets():
     tx_df = pd.read_csv("data/transactions.csv")
     sess_df = pd.read_csv("data/customer_sessions.csv")
     stores_df = pd.read_csv("data/bengaluru_electronics_stores.csv")
-    rules = run_apriori_analysis(tx_df, min_support=0.015, min_lift=1.1)
+    bayes_rules = run_bayesian_inference_engine(tx_df, min_prior=0.015, min_lift=1.1)
     eda = get_eda_summaries(tx_df, sess_df)
-    return tx_df, sess_df, stores_df, rules, eda
+    return tx_df, sess_df, stores_df, bayes_rules, eda
 
 @st.cache_resource
 def load_ai_artifacts(sess_df):
@@ -50,7 +50,6 @@ if "ecc_past_orders" not in st.session_state:
 if "ecc_time_site" not in st.session_state:
     st.session_state.ecc_time_site = 10.0
 
-# Sync Callbacks between Slider and Typebox
 def sync_discount_from_slider():
     st.session_state.ecc_discount = st.session_state.discount_slider
 
@@ -70,17 +69,19 @@ def sync_time_from_input():
     st.session_state.ecc_time_site = st.session_state.time_input
 
 
-# --- POP-UP DIALOG FOR "FREQUENTLY BOUGHT TOGETHER / GOOD COMBO" ---
+# --- POP-UP DIALOG FOR "FREQUENTLY BOUGHT TOGETHER / SMART COMBO" ---
 @st.dialog("🔥 Frequently Bought Together — Smart Combo!")
 def show_bundle_popup(trigger_item, matching_rules, buy_prob):
-    # Immediately set show_popup to False so editing ECC controls won't re-trigger it!
     st.session_state.show_popup = False
 
     icon = CATALOG[trigger_item]["icon"]
     st.markdown(f"Because you added **{icon} {trigger_item}** to your cart:")
 
     top_recs = matching_rules.head(3)
-    rec_items = [r for r in top_recs["Consequent"].tolist() if r in CATALOG and r not in st.session_state.cart]
+    rec_items = [
+        r for r in top_recs["Recommended_Accessory"].tolist()
+        if r in CATALOG and r not in st.session_state.cart
+    ]
 
     if not rec_items:
         st.info("You already have all top recommended accessories for this item in your cart!")
@@ -94,11 +95,12 @@ def show_bundle_popup(trigger_item, matching_rules, buy_prob):
     discounted_price = int(total_original * (1 - discount_rate))
 
     for _, row in top_recs.iterrows():
-        rec_name = row["Consequent"]
+        rec_name = row["Recommended_Accessory"]
         if rec_name in rec_items:
             st.success(
                 f"{CATALOG[rec_name]['icon']} **{rec_name}** — ₹{CATALOG[rec_name]['price']:,}  \n"
-                f"*{row['confidence']*100:.0f}% of shoppers add this (Lift: {row['lift']:.2f}× | Bundle Score: {row['Bundle_Score']}/100)*"
+                f"*Posterior P(Add|Cart): {row['Posterior_Prob']*100:.0f}% "
+                f"(Bayesian Lift: {row['Bayesian_Lift']:.2f}× | Bundle Score: {row['Bundle_Score']}/100)*"
             )
 
     st.divider()
@@ -121,7 +123,7 @@ def show_bundle_popup(trigger_item, matching_rules, buy_prob):
 
 # --- HEADER & EVALUATOR SESSION SIMULATOR ---
 st.title("🛍️ SmartCart AI: Bengaluru Electronics Storefront & Logic Inspector")
-st.caption("Left: Customer Shopping Experience (52 Products) | Right: Live Apriori Analytics & Random Forest (100 Trees) Backend Trace")
+st.caption("BAINB501 Project | Bayesian Inference + Forward-Chaining Rules (CO2/CO3) & Random Forest Propensity AI")
 
 with st.expander("⚙️ Evaluator Context Controls (Simulate Customer & Store Profile)", expanded=True):
     ec1, ec2, ec3, ec4, ec5 = st.columns([1.4, 1, 0.9, 1, 1], gap="medium")
@@ -242,31 +244,37 @@ with backend_col:
         active_item = st.session_state.last_added
         cart_val = sum(CATALOG[i]["price"] for i in st.session_state.cart)
 
-        # 1. APRIORI BACKEND TRACE
-        st.markdown("#### 1️⃣ Data Analytics Engine: Apriori Rule Mining")
-        st.caption(f"Mining 25,000 Bengaluru orders where Antecedent = `{active_item}`")
+        # 1. BAYESIAN INFERENCE & FORWARD-CHAINING TRACE (MODULE 2 & 3)
+        st.markdown("#### 1️⃣ Module 3 Engine: Bayesian Inference & Rule Filtering")
+        st.caption(f"Computing exact Bayes' Theorem posterior P(Accessory | Evidence = `{active_item}`)")
 
-        matching_rules = rules_df[rules_df["Antecedent"] == active_item]
+        matching_rules = rules_df[rules_df["Evidence_Item"] == active_item]
         if not matching_rules.empty:
             top_rule = matching_rules.iloc[0]
             st.code(
-                f"TOP RULE: [{active_item}] ➔ [{top_rule['Consequent']}]\n"
-                f"• Support      = {top_rule['support']:.4f} ({top_rule['support']*100:.2f}% of all 25,000 orders)\n"
-                f"• Confidence   = {top_rule['confidence']:.4f} ({top_rule['confidence']*100:.1f}% of {active_item} buyers add this)\n"
-                f"• Lift         = {top_rule['lift']:.2f}x  (> 1.0 confirms strong positive association)\n"
-                f"• Bundle Score = {top_rule['Bundle_Score']} / 100",
+                f"BAYESIAN INFERENCE: P({top_rule['Recommended_Accessory']} | {active_item})\n"
+                f"• Prior P(B)          = {top_rule['Prior_Prob']:.4f} ({top_rule['Prior_Prob']*100:.2f}% baseline purchase rate)\n"
+                f"• Likelihood P(A|B)   = {top_rule['Likelihood']:.4f}\n"
+                f"• Posterior P(B|A)    = {top_rule['Posterior_Prob']:.4f} ({top_rule['Posterior_Prob']*100:.1f}% conditional probability)\n"
+                f"• Bayesian Lift       = {top_rule['Bayesian_Lift']:.2f}x  (Posterior / Prior > 1.0)\n"
+                f"• Forward-Chain Rule  = PASSED (Target is_anchor == False)\n"
+                f"• Bundle Score        = {top_rule['Bundle_Score']} / 100",
                 language="yaml"
             )
-            with st.expander("View All Discovered Apriori Combos for this Product"):
+            with st.expander("View Conditional Probability Table (CPT) for this Item"):
                 st.dataframe(
-                    matching_rules[["Antecedent", "Consequent", "support", "confidence", "lift", "Bundle_Score"]],
+                    matching_rules[[
+                        "Evidence_Item", "Recommended_Accessory",
+                        "Prior_Prob", "Likelihood", "Posterior_Prob",
+                        "Bayesian_Lift", "Bundle_Score"
+                    ]],
                     use_container_width=True
                 )
         else:
-            st.warning(f"`{active_item}` has no downstream accessory rules at current support thresholds.")
+            st.warning(f"`{active_item}` has no downstream accessory rules at current prior thresholds.")
 
         # 2. RANDOM FOREST BACKEND TRACE
-        st.markdown("#### 2️⃣ AI Engine: Random Forest Propensity Model")
+        st.markdown("#### 2️⃣ Predictive AI: Random Forest Propensity Model")
         st.caption("Passing live session features through 100 trained Decision Trees (`models/random_forest_bundle.pkl`):")
 
         input_df = pd.DataFrame([{
@@ -295,11 +303,10 @@ with backend_col:
         else:
             st.info(f"**AI Action:** Propensity ({buy_prob:.1f}%) < 50% $\\rightarrow$ **Trigger Standard 10% Combo Pop-Up.**")
 
-        # Trigger Pop-Up Modal ONLY when newly added
         if st.session_state.show_popup and not matching_rules.empty:
             show_bundle_popup(active_item, matching_rules, buy_prob)
     else:
-        st.info("👈 Search and add any item on the left storefront to inspect the live Apriori math and Random Forest 100-tree voting here!")
+        st.info("👈 Search and add any item on the left storefront to inspect live Bayesian Inference and Random Forest 100-tree voting here!")
 
 # ================= BOTTOM: FULL ANALYTICS & AI BENCHMARKS =================
 st.divider()

@@ -1,158 +1,153 @@
 import os
-import sys
+import random
 import numpy as np
 import pandas as pd
-
-# Ensure root folder is in path when running directly
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.catalog import CATALOG
 
-def generate_ecommerce_data(num_records=25000, seed=42):
+BENGALURU_STORES = [
+    ("BLR-01", "Croma - Indiranagar 100ft Rd", "Indiranagar"),
+    ("BLR-02", "Reliance Digital - Koramangala 4th Block", "Koramangala"),
+    ("BLR-03", "Pai International - Jayanagar 4th Block", "Jayanagar"),
+    ("BLR-04", "Croma - Whitefield Phoenix Marketcity", "Whitefield"),
+    ("BLR-05", "Reliance Digital - Orion Mall Malleshwaram", "Malleshwaram"),
+    ("BLR-06", "Girias - Hebbal Ring Road", "Hebbal"),
+    ("BLR-07", "Croma - Electronic City Phase 1", "Electronic City"),
+    ("BLR-08", "SP Road Tech Hub - City Market", "SP Road"),
+    ("BLR-09", "Reliance Digital - HSR Layout Sector 2", "HSR Layout"),
+    ("BLR-10", "Pai International - Marathahalli Bridge", "Marathahalli"),
+    ("BLR-11", "Croma - Yelahanka New Town", "Yelahanka"),
+    ("BLR-12", "Reliance Digital - Bannerghatta Road", "Bannerghatta Road"),
+    ("BLR-13", "Pai International - Rajajinagar", "Rajajinagar"),
+    ("BLR-14", "Croma - JP Nagar 6th Phase", "JP Nagar"),
+    ("BLR-15", "Reliance Digital - Bellandur Central", "Bellandur"),
+    ("BLR-16", "Girias - BTM Layout 2nd Stage", "BTM Layout"),
+    ("BLR-17", "Croma - Sarjapur Road", "Sarjapur Road"),
+    ("BLR-18", "Reliance Digital - Banashankari 2nd Stage", "Banashankari"),
+    ("BLR-19", "Pai International - Vijayanagar", "Vijayanagar"),
+    ("BLR-20", "Croma - Kalyan Nagar HRBR", "Kalyan Nagar"),
+    ("BLR-21", "Reliance Digital - RT Nagar", "RT Nagar"),
+    ("BLR-22", "Girias - Basavanagudi", "Basavanagudi"),
+    ("BLR-23", "Croma - MG Road Brigade Junction", "MG Road"),
+    ("BLR-24", "Reliance Digital - Kengeri Satellite Town", "Kengeri"),
+    ("BLR-25", "Pai International - Peenya Industrial Area", "Peenya"),
+    ("BLR-26", "Croma - KR Puram Tin Factory", "KR Puram"),
+    ("BLR-27", "Reliance Digital - Sahakarnagar", "Sahakarnagar"),
+    ("BLR-28", "Girias - Ulsoor Lake Road", "Ulsoor"),
+    ("BLR-29", "Croma - Sadashivanagar", "Sadashivanagar"),
+    ("BLR-30", "Reliance Digital - Brookefield ITPL", "Brookefield"),
+]
+
+# Domain-realistic co-purchase patterns for generating realistic transactions
+BUNDLE_AFFINITIES = {
+    "Ultrabook Laptop": [("Wireless Ergonomic Mouse", 0.65), ("USB-C Multiport Hub", 0.55), ("Waterproof Laptop Backpack", 0.50), ("1TB Portable NVMe SSD", 0.35)],
+    "Gaming Laptop": [("Mechanical RGB Keyboard", 0.70), ("7.1 Surround Gaming Headset", 0.65), ("Laptop Cooling Pad", 0.55), ("1TB Portable NVMe SSD", 0.45)],
+    "MacBook Air M2": [("USB-C Multiport Hub", 0.75), ("Waterproof Laptop Backpack", 0.45), ("1TB Portable NVMe SSD", 0.40)],
+    "All-in-One Desktop PC": [("Wireless Ergonomic Mouse", 0.60), ("Mechanical RGB Keyboard", 0.50), ("Surge Protector Power Strip", 0.45)],
+    "Mini PC Workstation": [("27-inch 4K IPS Monitor", 0.65), ("Mechanical RGB Keyboard", 0.55), ("Wireless Ergonomic Mouse", 0.55)],
+    "27-inch 4K IPS Monitor": [("Ultra High-Speed HDMI 2.1 Cable", 0.60), ("USB-C Multiport Hub", 0.40), ("Surge Protector Power Strip", 0.35)],
+    "Flagship 5G Smartphone": [("65W GaN Fast Charger", 0.72), ("Tempered Glass & Armor Case", 0.68), ("MagSafe 10000mAh Powerbank", 0.45)],
+    "Mid-Range 5G Phone": [("Tempered Glass & Armor Case", 0.75), ("65W GaN Fast Charger", 0.50), ("MagSafe 10000mAh Powerbank", 0.35)],
+    "Foldable Smartphone": [("65W GaN Fast Charger", 0.70), ("MagSafe 10000mAh Powerbank", 0.55), ("Active Stylus Pen", 0.40)],
+    "11-inch Pro Tablet": [("Active Stylus Pen", 0.68), ("65W GaN Fast Charger", 0.45), ("Tempered Glass & Armor Case", 0.55)],
+    "E-Ink Digital Reader": [("Tempered Glass & Armor Case", 0.50), ("65W GaN Fast Charger", 0.30)],
+    "ANC Over-Ear Headphones": [("Hard-Shell Headphone Case", 0.65), ("65W GaN Fast Charger", 0.30)],
+    "True Wireless Earbuds": [("Tempered Glass & Armor Case", 0.35), ("65W GaN Fast Charger", 0.30)],
+    "AMOLED Fitness Smartwatch": [("Silicone Watch Strap Pack", 0.70), ("65W GaN Fast Charger", 0.25)],
+    "Dolby Atmos Soundbar": [("Ultra High-Speed HDMI 2.1 Cable", 0.65), ("Surge Protector Power Strip", 0.45)],
+    "Portable Bluetooth Speaker": [("65W GaN Fast Charger", 0.40), ("MagSafe 10000mAh Powerbank", 0.35)],
+    "Mirrorless 4K Camera": [("50mm f/1.8 Prime Lens", 0.62), ("128GB High-Speed SDXC Card", 0.75), ("Carbon Fiber Tripod", 0.55)],
+    "4K Waterproof Action Camera": [("128GB High-Speed SDXC Card", 0.78), ("Carbon Fiber Tripod", 0.48), ("MagSafe 10000mAh Powerbank", 0.40)],
+    "Foldable GPS Camera Drone": [("128GB High-Speed SDXC Card", 0.72), ("MagSafe 10000mAh Powerbank", 0.45)],
+    "Next-Gen Gaming Console": [("Extra Wireless Controller", 0.68), ("Dual Controller Charging Dock", 0.58), ("7.1 Surround Gaming Headset", 0.50), ("Ultra High-Speed HDMI 2.1 Cable", 0.45)],
+    "Handheld Gaming PC": [("1TB Portable NVMe SSD", 0.65), ("65W GaN Fast Charger", 0.55), ("7.1 Surround Gaming Headset", 0.42)],
+    "VR Headset 128GB": [("65W GaN Fast Charger", 0.50), ("Hard-Shell Headphone Case", 0.45)],
+    "55-inch 4K QLED Smart TV": [("Heavy-Duty Swivel TV Wall Mount", 0.70), ("Ultra High-Speed HDMI 2.1 Cable", 0.62), ("Surge Protector Power Strip", 0.55)],
+    "4K Laser Home Projector": [("Ultra High-Speed HDMI 2.1 Cable", 0.65), ("Carbon Fiber Tripod", 0.45), ("Surge Protector Power Strip", 0.45)],
+    "Smart Home Hub Display": [("Surge Protector Power Strip", 0.40), ("Wi-Fi Mesh Extender", 0.35)],
+    "Robotic Vacuum & Mop": [("Surge Protector Power Strip", 0.35), ("Wi-Fi Mesh Extender", 0.30)],
+    "Wi-Fi 6 Dual-Band Router": [("Cat-6 Ethernet Cable (10m)", 0.65), ("Wi-Fi Mesh Extender", 0.50), ("Surge Protector Power Strip", 0.35)],
+}
+
+def generate_ecommerce_data(num_records: int = 25000, seed: int = 42):
+    random.seed(seed)
     np.random.seed(seed)
     os.makedirs("data", exist_ok=True)
-    
-    # 1. 30 Bengaluru Electronics Stores Master Data
-    stores_data = [
-        ("BLR_001", "Croma - Indiranagar 100ft Rd", "Croma", "Indiranagar", "560038", "Flagship Retail"),
-        ("BLR_002", "Reliance Digital - Mantri Square", "Reliance Digital", "Malleshwaram", "560003", "Mall Retail"),
-        ("BLR_003", "Pai International - Jayanagar 4th Block", "Pai International", "Jayanagar", "560011", "Multi-Brand Retail"),
-        ("BLR_004", "Croma - Koramangala 80ft Rd", "Croma", "Koramangala", "560029", "Flagship Retail"),
-        ("BLR_005", "Reliance Digital - Phoenix Marketcity", "Reliance Digital", "Whitefield", "560048", "Mall Retail"),
-        ("BLR_006", "Sangeetha Gadgets - Marathahalli", "Sangeetha Gadgets", "Marathahalli", "560037", "Mobile & Audio Hub"),
-        ("BLR_007", "Girias - Shantinagar", "Girias", "Shantinagar", "560027", "Home & Electronics"),
-        ("BLR_008", "Croma - Electronic City Phase 1", "Croma", "Electronic City", "560100", "IT Hub Retail"),
-        ("BLR_009", "Kanchan Computers - SP Road", "Independent", "SP Road", "560002", "Wholesale & Hardware"),
-        ("BLR_010", "Sri Lakshmi Electronics - SP Road", "Independent", "SP Road", "560002", "Wholesale & Hardware"),
-        ("BLR_011", "Pai International - Hebbal", "Pai International", "Hebbal", "560024", "Multi-Brand Retail"),
-        ("BLR_012", "Reliance Digital - Galleria Mall", "Reliance Digital", "Yelahanka", "560064", "Mall Retail"),
-        ("BLR_013", "Croma - HSR Layout Sector 2", "Croma", "HSR Layout", "560102", "Flagship Retail"),
-        ("BLR_014", "Devi International - Jayanagar", "Devi International", "Jayanagar", "560011", "Multi-Brand Retail"),
-        ("BLR_015", "iPlanet - Indiranagar", "iPlanet", "Indiranagar", "560038", "Brand Exclusive"),
-        ("BLR_016", "Croma - Orion Mall", "Croma", "Rajajinagar", "560055", "Mall Retail"),
-        ("BLR_017", "Reliance Digital - Nexus Mall", "Reliance Digital", "Koramangala", "560095", "Mall Retail"),
-        ("BLR_018", "Pai International - JP Nagar", "Pai International", "JP Nagar", "560078", "Multi-Brand Retail"),
-        ("BLR_019", "Girias - Banashankari", "Girias", "Banashankari", "560070", "Home & Electronics"),
-        ("BLR_020", "Croma - Bellandur ORR", "Croma", "Bellandur", "560103", "IT Hub Retail"),
-        ("BLR_021", "Sangeetha Gadgets - MG Road", "Sangeetha Gadgets", "MG Road", "560001", "Mobile & Audio Hub"),
-        ("BLR_022", "Reliance Digital - Vega City Mall", "Reliance Digital", "Bannerghatta Road", "560076", "Mall Retail"),
-        ("BLR_023", "iPlanet - UB City", "iPlanet", "Vittal Mallya Road", "560001", "Brand Exclusive"),
-        ("BLR_024", "Ankit Infotech - SP Road", "Independent", "SP Road", "560002", "Wholesale & Hardware"),
-        ("BLR_025", "Pai International - BTM Layout", "Pai International", "BTM Layout", "560076", "Multi-Brand Retail"),
-        ("BLR_026", "Croma - Kammanahalli", "Croma", "Kammanahalli", "560084", "Flagship Retail"),
-        ("BLR_027", "Reliance Digital - Bhartiya Mall", "Reliance Digital", "Thanisandra", "560064", "Mall Retail"),
-        ("BLR_028", "Sangeetha Gadgets - Vijayanagar", "Sangeetha Gadgets", "Vijayanagar", "560040", "Mobile & Audio Hub"),
-        ("BLR_029", "Girias - RT Nagar", "Girias", "RT Nagar", "560032", "Home & Electronics"),
-        ("BLR_030", "Poorvika Mobiles - Malleshwaram", "Poorvika", "Malleshwaram", "560003", "Mobile & Audio Hub"),
-    ]
-    stores_df = pd.DataFrame(stores_data, columns=["Store_ID", "Store_Name", "Chain", "Locality", "Pincode", "Store_Type"])
+
+    stores_df = pd.DataFrame(BENGALURU_STORES, columns=["Store_ID", "Store_Name", "Locality"])
     stores_df.to_csv("data/bengaluru_electronics_stores.csv", index=False)
 
-    # 2. Bundle Association Rules Map (Anchor -> [(Accessory, Probability), ...])
-    bundle_patterns = {
-        "Gaming Laptop": [("Wireless Mouse", 0.72), ("Mechanical Keyboard", 0.54), ("Laptop Cooling Pad", 0.45), ("Laptop Backpack", 0.38)],
-        "Ultrabook Laptop": [("Wireless Mouse", 0.75), ("USB-C Multiport Hub", 0.58), ("Laptop Backpack", 0.44), ("1TB Portable NVMe SSD", 0.30)],
-        "Desktop Mini PC": [("27-inch 4K Monitor", 0.68), ("Mechanical Keyboard", 0.65), ("Wireless Mouse", 0.70), ("Wi-Fi 6 Dual-Band Router", 0.28)],
-        "Flagship Smartphone": [("65W GaN Fast Charger", 0.74), ("MagSafe Silicone Case", 0.66), ("Privacy Tempered Glass", 0.55), ("TWS Wireless Earbuds", 0.38)],
-        "5G Mid-Range Phone": [("65W GaN Fast Charger", 0.65), ("MagSafe Silicone Case", 0.60), ("Privacy Tempered Glass", 0.58), ("20000mAh Power Bank", 0.34)],
-        "Pro Tablet 11-inch": [("Stylus Pen", 0.68), ("65W GaN Fast Charger", 0.50), ("TWS Wireless Earbuds", 0.35), ("64GB USB 3.2 Flash Drive", 0.25)],
-        "ANC Over-Ear Headphones": [("Headphone Stand", 0.52), ("USB-C Multiport Hub", 0.25), ("20000mAh Power Bank", 0.22)],
-        "Portable Bluetooth Speaker": [("20000mAh Power Bank", 0.48), ("65W GaN Fast Charger", 0.35), ("Smart Wi-Fi LED Strip", 0.28)],
-        "Mirrorless DSLR Camera": [("128GB High-Speed SD Card", 0.76), ("Heavy-Duty Tripod", 0.48), ("Waterproof Camera Bag", 0.52), ("50mm Prime Lens", 0.34)],
-        "4K Action Camera": [("128GB High-Speed SD Card", 0.78), ("Heavy-Duty Tripod", 0.42), ("Waterproof Camera Bag", 0.40), ("20000mAh Power Bank", 0.36)],
-        "Next-Gen Gaming Console": [("Wireless Dual Controller", 0.68), ("7.1 Surround Gaming Headset", 0.50), ("Dual Controller Charging Dock", 0.44), ("Ultra High-Speed HDMI 2.1 Cable", 0.40)],
-        "Handheld Gaming PC": [("1TB Portable NVMe SSD", 0.58), ("65W GaN Fast Charger", 0.52), ("TWS Wireless Earbuds", 0.42), ("20000mAh Power Bank", 0.45)],
-        "55-inch 4K QLED Smart TV": [("Dolby Atmos Soundbar", 0.58), ("Swivel TV Wall Mount", 0.64), ("Surge Protector Extension", 0.52), ("Ultra High-Speed HDMI 2.1 Cable", 0.45)],
-        "43-inch Full HD Smart TV": [("4K Streaming Stick", 0.54), ("Swivel TV Wall Mount", 0.60), ("Surge Protector Extension", 0.50), ("Smart Wi-Fi LED Strip", 0.32)],
-        "AMOLED GPS Smartwatch": [("Magnetic Sport Watch Strap", 0.62), ("Watch Magnetic Charging Cable", 0.44), ("TWS Wireless Earbuds", 0.38)],
-        "Fitness Tracker Band": [("Magnetic Sport Watch Strap", 0.58), ("Smart Bluetooth Weighing Scale", 0.42), ("Watch Magnetic Charging Cable", 0.40)],
-        "Wi-Fi 6 Dual-Band Router": [("Wi-Fi Mesh Range Extender", 0.56), ("Cat-6 Ethernet Cable (10m)", 0.64), ("Surge Protector Extension", 0.35)],
-    }
+    anchor_items = [k for k, v in CATALOG.items() if v["is_anchor"]]
+    accessory_items = [k for k, v in CATALOG.items() if not v["is_anchor"]]
 
-    anchor_list = list(bundle_patterns.keys())
-    date_pool = pd.date_range(start="2025-11-01", end="2026-10-31", freq="D")
-    dates = np.random.choice(date_pool, size=num_records)
+    tx_rows = []
+    session_rows = []
 
-    transactions = []
-    customer_sessions = []
+    for idx in range(1, num_records + 1):
+        tx_id = f"BLR-TX-{idx:06d}"
+        store_id, store_name, locality = random.choice(BENGALURU_STORES)
 
-    print(f"⏳ Generating {num_records:,} transactions across {len(stores_data)} Bengaluru stores & {len(CATALOG)} products...")
+        # Pick 1 primary anchor item
+        primary = random.choice(anchor_items)
+        basket = [primary]
 
-    for tx_id in range(1, num_records + 1):
-        order_id = f"BLR_ORD_{tx_id:06d}"
-        order_date = pd.Timestamp(dates[tx_id - 1])
-        month = order_date.month
+        # Add correlated accessories based on domain affinities
+        for acc, prob in BUNDLE_AFFINITIES.get(primary, []):
+            if random.random() < prob:
+                basket.append(acc)
 
-        store = stores_data[np.random.randint(0, len(stores_data))]
-        store_id, store_name, chain, locality, pincode, store_type = store
-
-        # Dasara/Diwali Festival Season Spike in Oct/Nov
-        is_festival = 1 if (month in [10, 11] and np.random.rand() < 0.75) or (np.random.rand() < 0.15) else 0
-        past_orders = np.random.randint(0, 20)
-        time_on_site_mins = round(np.random.uniform(1.5, 30.0), 1)
-        discount_pct = np.random.choice([0, 5, 10, 15, 20, 25, 30], p=[0.18, 0.18, 0.24, 0.16, 0.12, 0.07, 0.05])
-        payment_mode = np.random.choice(["UPI", "Credit Card", "Debit Card", "EMI", "Cash"], p=[0.42, 0.28, 0.12, 0.13, 0.05])
-
-        anchor_choice = anchor_list[np.random.randint(0, len(anchor_list))]
-        basket = [anchor_choice]
-
-        for accessory, prob in bundle_patterns[anchor_choice]:
-            if np.random.rand() < prob:
-                basket.append(accessory)
+        # Small random noise item
+        if random.random() < 0.12:
+            extra = random.choice(accessory_items)
+            if extra not in basket:
+                basket.append(extra)
 
         cart_value = sum(CATALOG[item]["price"] for item in basket)
+        items_in_cart = len(basket)
+        discount_pct = random.choice([0, 5, 10, 15, 20, 25])
+        is_festival = 1 if random.random() < 0.32 else 0
+        past_orders = int(np.clip(np.random.poisson(4.5), 0, 20))
+        time_on_site = round(float(np.clip(np.random.normal(9.5, 4.5), 1.5, 30.0)), 1)
+
+        # Realistic behavioral propensity logit for Bundle_Accepted (target variable)
+        logit = (
+            -2.6
+            + 0.14 * discount_pct
+            + 0.85 * is_festival
+            + 0.11 * past_orders
+            + 0.06 * time_on_site
+            + (0.45 if cart_value > 40000 else 0.0)
+            + np.random.normal(0, 0.55)
+        )
+        prob_accept = 1.0 / (1.0 + np.exp(-logit))
+        bundle_accepted = 1 if random.random() < prob_accept else 0
 
         for item in basket:
-            transactions.append({
-                "TransactionID": order_id,
-                "Order_Date": order_date.strftime("%Y-%m-%d"),
+            tx_rows.append({
+                "TransactionID": tx_id,
                 "Store_ID": store_id,
-                "Store_Name": store_name,
                 "Locality": locality,
-                "Category": CATALOG[item]["category"],
                 "Item": item,
-                "Price": CATALOG[item]["price"],
-                "Is_Festival": is_festival
+                "Category": CATALOG[item]["category"],
+                "Price": CATALOG[item]["price"]
             })
 
-        # Supervised AI Target Logic
-        prob_buy_bundle = (
-            0.08 +
-            (discount_pct * 0.017) +
-            (is_festival * 0.22) +
-            (min(time_on_site_mins, 20) * 0.010) +
-            (min(past_orders, 12) * 0.014) +
-            (0.05 if payment_mode in ["Credit Card", "EMI"] else 0.0)
-        )
-        prob_buy_bundle = np.clip(prob_buy_bundle + np.random.normal(0, 0.05), 0.05, 0.96)
-        bundle_accepted = 1 if np.random.rand() < prob_buy_bundle else 0
-
-        customer_sessions.append({
-            "TransactionID": order_id,
-            "Order_Date": order_date.strftime("%Y-%m-%d"),
+        session_rows.append({
+            "TransactionID": tx_id,
             "Store_ID": store_id,
             "Store_Name": store_name,
             "Locality": locality,
-            "Store_Type": store_type,
-            "Payment_Mode": payment_mode,
-            "Anchor_Product": anchor_choice,
             "Cart_Value": cart_value,
-            "Items_In_Cart": len(basket),
+            "Items_In_Cart": items_in_cart,
             "Discount_Pct": discount_pct,
             "Is_Festival_Season": is_festival,
             "Past_Orders": past_orders,
-            "Time_On_Site_Mins": time_on_site_mins,
+            "Time_On_Site_Mins": time_on_site,
             "Bundle_Accepted": bundle_accepted
         })
 
-    tx_df = pd.DataFrame(transactions)
-    sess_df = pd.DataFrame(customer_sessions)
-
-    tx_df.to_csv("data/transactions.csv", index=False)
-    sess_df.to_csv("data/customer_sessions.csv", index=False)
-    print("✅ Step 2 Complete! Generated:")
-    print(f"   • data/bengaluru_electronics_stores.csv ({len(stores_df)} stores)")
-    print(f"   • data/transactions.csv ({len(tx_df):,} rows)")
-    print(f"   • data/customer_sessions.csv ({len(sess_df):,} rows)")
+    pd.DataFrame(tx_rows).to_csv("data/transactions.csv", index=False)
+    pd.DataFrame(session_rows).to_csv("data/customer_sessions.csv", index=False)
+    print(f"Generated {num_records:,} Bengaluru sessions and {len(tx_rows):,} line-item transactions.")
 
 if __name__ == "__main__":
     generate_ecommerce_data(num_records=25000)
