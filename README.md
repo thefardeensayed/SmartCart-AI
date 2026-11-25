@@ -3,9 +3,9 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B.svg)](https://streamlit.io/)
 [![Scikit-Learn](https://img.shields.io/badge/AI-Random%20Forest-F7931E.svg)](https://scikit-learn.org/)
-[![MLxtend](https://img.shields.io/badge/Analytics-Apriori%20Mining-green.svg)](http://rasbt.github.io/mlxtend/)
+[![Course](https://img.shields.io/badge/Syllabus-BAINB501%20(CO2%20%26%20CO3)-green.svg)](#)
 
-**SmartCart AI** is a hybrid **Data Analytics + Artificial Intelligence** application designed for multi-store electronics retail networks (modeled across **30 Bengaluru retail branches** and **52 products**). It combines **Unsupervised Association Rule Mining (Apriori)** with a **Supervised Ensemble Classifier (Random Forest)** to recommend relevant product bundles and dynamically trigger personalized discounts based on real-time customer purchase propensity.
+**SmartCart AI** is a hybrid **Bayesian Probabilistic Reasoning + Machine Learning** application designed for multi-store electronics retail networks (modeled across **30 Bengaluru retail branches** and **52 products**). Aligned with **BAINB501 (Artificial Intelligence Concepts and Practice — Module 2 & Module 3)**, it combines **Exact Bayesian Inference & Forward-Chaining Rules** with a **Supervised Random Forest Classifier** to recommend relevant product bundles and dynamically trigger personalized discounts based on real-time customer purchase propensity.
 
 ---
 
@@ -14,11 +14,11 @@
 1. **Interactive Customer E-Commerce Storefront:**
    - Browse, search, and filter **52 electronics products across 8 categories** (Laptops, Smartphones, Audio, Wearables, Cameras, Gaming Consoles, Smart Home, Networking & Storage).
    - **Smart "Frequently Bought Together" Pop-Up Modal:** Dynamically suggests high-lift accessory bundles with 1-click **"Add Full Combo to Cart"** functionality.
-   - **Catalog Hierarchy Domain Filtering (`is_anchor`):** Ensures primary devices recommend accessories and accessories only recommend complementary accessories—never up-selling expensive main devices onto small accessory orders.
+   - **Forward-Chaining Domain Filtering (`is_anchor`):** Enforces catalog hierarchy rules so primary devices recommend accessories and accessories only recommend complementary accessories—never up-selling expensive main devices onto small accessory orders.
 
 2. **Evaluator's Live Backend Logic Inspector (X-Ray Mode):**
-   - **Data Analytics Trace:** Displays real-time **Support**, **Confidence**, **Lift**, and composite **Bundle Score (0–100)** formulas for every item added to the cart.
-   - **AI Propensity Trace:** Feeds live session context (`Cart_Value`, `Items_In_Cart`, `Discount_Pct`, `Is_Festival_Season`, `Past_Orders`, `Time_On_Site_Mins`) into a serialized **100-tree Random Forest Classifier** (`models/random_forest_bundle.pkl`), displaying live **YES vs. NO tree voting**.
+   - **Module 3 Bayesian Inference Trace:** Displays real-time **Prior $P(B)$**, **Likelihood $P(A \mid B)$**, **Exact Posterior $P(B \mid A)$**, **Bayesian Lift**, and composite **Bundle Score (0–100)** formulas for every item added to the cart.
+   - **Predictive AI Propensity Trace:** Feeds live session context (`Cart_Value`, `Items_In_Cart`, `Discount_Pct`, `Is_Festival_Season`, `Past_Orders`, `Time_On_Site_Mins`) into a serialized **100-tree Random Forest Classifier** (`models/random_forest_bundle.pkl`), displaying live **YES vs. NO tree voting**.
    - **Synced Evaluator Context Controls:** Adjust customer and store scenarios in real time using synchronized sliders, numeric typeboxes, and seasonal toggles.
 
 3. **Bengaluru Retail Analytics & Model Benchmarks:**
@@ -30,7 +30,7 @@
 ## 🏗️ Project Architecture
 
 ```text
-smart_bundle_ai/
+SmartCartAI/
 ├── data/                                    # Generated retail datasets (CSV)
 │   ├── bengaluru_electronics_stores.csv     # 30 Bengaluru retail store locations
 │   ├── customer_sessions.csv                # 25,000 customer behavioral sessions
@@ -40,11 +40,12 @@ smart_bundle_ai/
 ├── src/                                     # Core modular source code
 │   ├── catalog.py                           # 52-product catalog with is_anchor hierarchy
 │   ├── data_generator.py                    # Bengaluru retail & seasonal data pipeline
-│   ├── analytics.py                         # Apriori Market Basket Analysis & EDA engine
+│   ├── analytics.py                         # Bayesian Inference, Forward-Chaining & EDA engine
 │   └── ml_engine.py                         # Random Forest vs. Logistic Regression pipeline
 ├── train_model.py                           # Standalone offline model training & benchmark CLI
 ├── app.py                                   # Main Streamlit split-screen storefront & X-ray app
 ├── Requirements.txt                         # Python package dependencies
+├── .gitignore                               # Git ignore rules
 └── README.md                                # Project documentation
 ```
 
@@ -54,19 +55,19 @@ smart_bundle_ai/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/smart-bundle-ai.git
-cd smart-bundle-ai
+git clone https://github.com/thefardeensayed/SmartCart-AI.git
+cd SmartCart-AI
 ```
 
 ### 2. Create & Activate a Virtual Environment (Recommended)
 ```bash
 # Windows
-python -m venv venv
-venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 
 # macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 ### 3. Install Dependencies
@@ -88,11 +89,13 @@ Open your browser at **`http://localhost:8501`**.
 
 ---
 
-## 🧠 How the Hybrid Pipeline Works
+## 🧠 How the Hybrid AI Pipeline Works
 
-1. **Step 1 — Market Basket Analysis (Unsupervised):**  
-   Transactions are one-hot encoded into a boolean basket matrix. The **Apriori algorithm** extracts frequent itemsets (`min_support=0.015`, `min_lift=1.1`) and scores rules using a weighted composite **Bundle Score**.
-2. **Step 2 — Propensity Scoring (Supervised):**  
+1. **Step 1 — Bayesian Inference & Forward-Chaining Rules (Module 2 & 3 / CO2 & CO3):**  
+   Using 25,000 historical orders, the engine builds Conditional Probability Tables (CPTs) and computes exact posterior probabilities via **Bayes' Theorem**:
+   $$P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A)}$$
+   Forward-chaining domain rules prune anchor devices (`is_anchor == True`) from consequent recommendations, and pairs are ranked using **Bayesian Lift** $\left(\frac{P(B \mid A)}{P(B)}\right)$ and a weighted composite **Bundle Score (0–100)**.
+2. **Step 2 — Propensity Scoring (Supervised Ensemble Learning):**  
    A **Random Forest Classifier** (`n_estimators=100`, `max_depth=8`) predicts the probability $P(\text{Bundle\_Accepted} = 1 \mid X)$. If propensity $\ge 50\%$, a **15% VIP Combo Discount** is unlocked; otherwise, a **10% Standard Combo Discount** is offered.
 
 ---
@@ -100,6 +103,6 @@ Open your browser at **`http://localhost:8501`**.
 ## 🛠️ Tech Stack
 * **Language:** Python 3.9+
 * **Data Manipulation:** Pandas, NumPy
-* **Data Analytics:** MLxtend (Apriori & Association Rules)
+* **Probabilistic & Rule Engine:** Exact Bayesian Inference, Forward-Chaining Domain Filtering
 * **Machine Learning:** Scikit-Learn (Random Forest, Logistic Regression), Joblib
 * **Frontend & Visualization:** Streamlit, Plotly Express
