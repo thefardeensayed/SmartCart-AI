@@ -42,31 +42,39 @@ if "last_added" not in st.session_state:
 if "show_popup" not in st.session_state:
     st.session_state.show_popup = False
 
-# Initialize ECC Synced Control States
-if "ecc_discount" not in st.session_state:
-    st.session_state.ecc_discount = 15
-if "ecc_past_orders" not in st.session_state:
-    st.session_state.ecc_past_orders = 6
-if "ecc_time_site" not in st.session_state:
-    st.session_state.ecc_time_site = 10.0
+# Initialize ECC Synced Control States (Both widgets stay 100% locked together)
+if "discount_slider" not in st.session_state:
+    st.session_state.discount_slider = 15
+if "discount_input" not in st.session_state:
+    st.session_state.discount_input = 15
+
+if "orders_slider" not in st.session_state:
+    st.session_state.orders_slider = 6
+if "orders_input" not in st.session_state:
+    st.session_state.orders_input = 6
+
+if "time_slider" not in st.session_state:
+    st.session_state.time_slider = 10.0
+if "time_input" not in st.session_state:
+    st.session_state.time_input = 10.0
 
 def sync_discount_from_slider():
-    st.session_state.ecc_discount = st.session_state.discount_slider
+    st.session_state.discount_input = st.session_state.discount_slider
 
 def sync_discount_from_input():
-    st.session_state.ecc_discount = st.session_state.discount_input
+    st.session_state.discount_slider = st.session_state.discount_input
 
 def sync_orders_from_slider():
-    st.session_state.ecc_past_orders = st.session_state.orders_slider
+    st.session_state.orders_input = st.session_state.orders_slider
 
 def sync_orders_from_input():
-    st.session_state.ecc_past_orders = st.session_state.orders_input
+    st.session_state.orders_slider = st.session_state.orders_input
 
 def sync_time_from_slider():
-    st.session_state.ecc_time_site = st.session_state.time_slider
+    st.session_state.time_input = st.session_state.time_slider
 
 def sync_time_from_input():
-    st.session_state.ecc_time_site = st.session_state.time_input
+    st.session_state.time_slider = st.session_state.time_input
 
 
 # --- POP-UP DIALOG FOR "FREQUENTLY BOUGHT TOGETHER / SMART COMBO" ---
@@ -133,13 +141,11 @@ with st.expander("⚙️ Evaluator Context Controls (Simulate Customer & Store P
 
     with ec2:
         st.slider(
-            "🏷️ Bundle Discount (%)", 0, 30,
-            value=st.session_state.ecc_discount, step=1,
+            "🏷️ Bundle Discount (%)", 0, 100, step=1,
             key="discount_slider", on_change=sync_discount_from_slider
         )
         st.number_input(
-            "Type Discount (%)", min_value=0, max_value=30,
-            value=st.session_state.ecc_discount, step=1,
+            "Type Discount (%)", min_value=0, max_value=100, step=1,
             key="discount_input", on_change=sync_discount_from_input,
             label_visibility="collapsed"
         )
@@ -151,33 +157,29 @@ with st.expander("⚙️ Evaluator Context Controls (Simulate Customer & Store P
 
     with ec4:
         st.slider(
-            "📦 Customer Past Orders", 0, 20,
-            value=st.session_state.ecc_past_orders, step=1,
+            "📦 Customer Past Orders", 0, 20, step=1,
             key="orders_slider", on_change=sync_orders_from_slider
         )
         st.number_input(
-            "Type Past Orders", min_value=0, max_value=20,
-            value=st.session_state.ecc_past_orders, step=1,
+            "Type Past Orders", min_value=0, max_value=20, step=1,
             key="orders_input", on_change=sync_orders_from_input,
             label_visibility="collapsed"
         )
 
     with ec5:
         st.slider(
-            "⏱️ Time on Site (mins)", 1.0, 30.0,
-            value=float(st.session_state.ecc_time_site), step=0.5,
+            "⏱️ Time on Site (mins)", 1.0, 30.0, step=0.5,
             key="time_slider", on_change=sync_time_from_slider
         )
         st.number_input(
-            "Type Time (mins)", min_value=1.0, max_value=30.0,
-            value=float(st.session_state.ecc_time_site), step=0.5,
+            "Type Time (mins)", min_value=1.0, max_value=30.0, step=0.5,
             key="time_input", on_change=sync_time_from_input,
             label_visibility="collapsed"
         )
 
-sim_discount = st.session_state.ecc_discount
-sim_past_orders = st.session_state.ecc_past_orders
-sim_time_site = st.session_state.ecc_time_site
+sim_discount = st.session_state.discount_slider
+sim_past_orders = st.session_state.orders_slider
+sim_time_site = st.session_state.time_slider
 
 st.divider()
 
